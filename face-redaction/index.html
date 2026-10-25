@@ -33,7 +33,7 @@
     .tldr h2 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
     .tldr ul { margin: 0; padding-left: 20px; }
     .tldr li { margin: 6px 0; }
-    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0 6px; }
+    .pair { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 8px 0 6px; }
     figure { margin: 0; }
     figure img { width: 100%; height: auto; display: block; border-radius: 6px; border: 1px solid var(--line); }
     figcaption { font-size: 13px; color: var(--muted); margin-top: 6px; }
@@ -77,7 +77,11 @@
     </figure>
     <figure>
       <img src="assets/shower-redacted-zoom.jpg" width="440" height="440" alt="Same crop with only the face region blurred">
-      <figcaption>Fine-tuned RF-DETR + blur, face box only</figcaption>
+      <figcaption>Strong blur on the detected face box</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/shower-solidfill-zoom.jpg" width="440" height="440" alt="Same crop with the face box replaced by a solid fill">
+      <figcaption>Solid fill: cannot be reversed</figcaption>
     </figure>
   </div>
   <p class="caption">Generated test image, not real footage. Full frames: <a href="assets/shower-original.jpg">before</a> · <a href="assets/shower-redacted.jpg">after</a> · <a href="assets/contact-sheet.jpg">all 22 scenes × 6 models</a>. The rest of the frame is untouched. The box clips the top of the hair, which is why box coverage is on the trial list below.</p>
