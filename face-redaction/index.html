@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Reflected-Face Redaction Notes</title>
+  <meta name="description" content="Pre-trial notes: a fine-tuned face detector tested on mirror, fridge-door and shower-glass scenes, with measured numbers and a 7-day trial plan.">
+  <style>
+    :root {
+      --bg: #ffffff; --fg: #1d2124; --muted: #5d666d; --line: #e3e6e8;
+      --soft: #f5f6f7; --accent: #1f6f5c; --good: #1f6f5c; --bad: #a3462b;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #16191b; --fg: #e6e8ea; --muted: #9aa3aa; --line: #2c3236;
+        --soft: #1e2225; --accent: #6cc3a8; --good: #6cc3a8; --bad: #e08a6d;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #16191b; --fg: #e6e8ea; --muted: #9aa3aa; --line: #2c3236;
+      --soft: #1e2225; --accent: #6cc3a8; --good: #6cc3a8; --bad: #e08a6d;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 48px 16px 64px; }
+    h1 { font-size: 28px; line-height: 1.25; margin: 0 0 6px; letter-spacing: -0.01em; }
+    h2 { font-size: 20px; margin: 44px 0 12px; }
+    p { margin: 0 0 14px; }
+    a { color: var(--accent); }
+    .byline { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+    .tldr { background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 18px 22px; }
+    .tldr h2 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .tldr ul { margin: 0; padding-left: 20px; }
+    .tldr li { margin: 6px 0; }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0 6px; }
+    figure { margin: 0; }
+    figure img { width: 100%; height: auto; display: block; border-radius: 6px; border: 1px solid var(--line); }
+    figcaption { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .caption { font-size: 13px; color: var(--muted); }
+    .table-wrap { overflow-x: auto; margin: 4px 0 8px; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { font-weight: 600; color: var(--muted); font-size: 13px; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    tr.mine td { font-weight: 600; }
+    .good { color: var(--good); }
+    .bad { color: var(--bad); }
+    ol, ul { padding-left: 22px; }
+    li { margin: 4px 0; }
+    hr { border: 0; border-top: 1px solid var(--line); margin: 44px 0 20px; }
+    footer { font-size: 13px; color: var(--muted); }
+    @media (max-width: 520px) { h1 { font-size: 24px; } .pair { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Finding faces in mirrors and shower glass</h1>
+  <p class="byline">Adrian López Rodríguez · PhD, computer vision · prepared for the face-redaction trial · October 2026</p>
+
+  <section class="tldr" aria-labelledby="tldr">
+    <h2 id="tldr">TL;DR</h2>
+    <ul>
+      <li>As a quick draft for this application, I fine-tuned <strong>RF-DETR Small</strong> (Apache-2.0, commercial use allowed) into a face detector: 10 epochs on 10,000 ordinary Open Images photos, one A10 GPU, with no reflection or synthetic data.</li>
+      <li>On 22 home scenes built around your failure cases (mirrors, fridge doors, shower glass; 9 contain no face) it found <strong>14 of 14 faces</strong> and fired on <strong>1 of 9</strong> empty scenes. YuNet, your current detector, found 10 of 14 and fired on 5 of 9.</li>
+      <li>It finds the face behind shower glass, the case your listing says nothing caught.</li>
+      <li>Caveats: the 22 scenes are generated images, not GoPro footage, and no model here reaches 99% recall on ordinary photos yet. Closing that gap on your clips is the trial.</li>
+      <li>The next step I'd test is fine-tuning on generated images of your hard cases: reflections in mirrors, appliance doors and shower glass, plus face-like objects that should not be blurred.</li>
+    </ul>
+  </section>
+
+  <h2>The shower-glass case</h2>
+  <div class="pair">
+    <figure>
+      <img src="assets/shower-original-zoom.jpg" width="440" height="440" alt="Faint reflection of a man's face in shower glass, before redaction">
+      <figcaption>Input (crop)</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/shower-redacted-zoom.jpg" width="440" height="440" alt="Same crop with only the face region blurred">
+      <figcaption>Fine-tuned RF-DETR + blur, face box only</figcaption>
+    </figure>
+  </div>
+  <p class="caption">Generated test image, not real footage. Full frames: <a href="assets/shower-original.jpg">before</a> · <a href="assets/shower-redacted.jpg">after</a> · <a href="assets/contact-sheet.jpg">all 22 scenes × 6 models</a>. The rest of the frame is untouched. The box clips the top of the hair, which is why box coverage is on the trial list below.</p>
+
+  <h2>Results on the hard scenes</h2>
+  <p>22 images: 13 with a reflected face (14 faces), 9 with no face but plenty of glass and steel. All models at confidence 0.40, box match at IoU ≥ 0.5.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Model</th><th class="num">Faces found</th><th class="num">Empty scenes with a false alarm</th><th>Commercial licence</th></tr></thead>
+      <tbody>
+        <tr class="mine"><td>RF-DETR Small, my fine-tune</td><td class="num good">14 / 14</td><td class="num good">1 / 9</td><td>Yes (Apache-2.0)</td></tr>
+        <tr><td>RF-DETR Small, before fine-tune</td><td class="num bad">0 / 14</td><td class="num">3 / 9</td><td>Yes</td></tr>
+        <tr><td>SCRFD 2.5GF</td><td class="num">12 / 14</td><td class="num">0 / 9</td><td class="bad">No (research only)</td></tr>
+        <tr><td>YuNet multiscale</td><td class="num">10 / 14</td><td class="num bad">5 / 9</td><td>Yes (MIT)</td></tr>
+        <tr><td>RetinaFace MobileNet</td><td class="num">8 / 14</td><td class="num">0 / 9</td><td>Unclear</td></tr>
+        <tr><td>SAM 3.1, prompt “face”</td><td class="num">14 / 14</td><td class="num bad">5 / 9</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="caption">Before fine-tuning, RF-DETR has no face class, so its person boxes stand in as a proxy. That 0 → 14 is the number the fine-tune moved.</p>
+
+  <h2>Results on ordinary photos</h2>
+  <p>400 held-out Open Images photos (200 with faces, 329 faces in total; 200 with none). For each model I used the cutoff that gives the most recall while keeping precision at 95% or above.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Model</th><th class="num">Recall</th><th class="num">Precision</th><th class="num">Empty photos with a false alarm</th></tr></thead>
+      <tbody>
+        <tr><td>SCRFD 2.5GF (research licence)</td><td class="num">73.3%</td><td class="num">96.0%</td><td class="num">4 / 200</td></tr>
+        <tr class="mine"><td>RF-DETR Small, my fine-tune</td><td class="num">65.3%</td><td class="num">95.1%</td><td class="num">10 / 200</td></tr>
+        <tr><td>YuNet multiscale</td><td class="num">64.7%</td><td class="num">96.4%</td><td class="num">6 / 200</td></tr>
+        <tr><td>RetinaFace MobileNet</td><td class="num">47.1%</td><td class="num">95.7%</td><td class="num">5 / 200</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="caption">These are small, crowded faces in thumbnails of 640 px or less, much harder than a face in a 4K frame. The RF-DETR base model never reached 95% precision here. Stills say nothing about tracking a face across a span of frames.</p>
+
+  <h2>What this does not show</h2>
+  <ul>
+    <li>Performance on real head-mounted GoPro footage. I have not seen yours.</li>
+    <li>Recall over a face's whole time span. Your score counts every frame, and that needs tracking across frames, which this work does not cover.</li>
+    <li>Speed and cost per video-hour for RF-DETR on 4K. I have measured YuNet and RetinaFace on 4K clips only.</li>
+    <li>Any gain from synthetic training data. That has not been run yet.</li>
+  </ul>
+
+  <h2>Proposed approach</h2>
+  <p><strong>Model.</strong> I'd start from RF-DETR Small. It is a small real-time detector with a DINOv2 backbone, it fine-tunes quickly, and its Apache-2.0 weights allow commercial use. Even after this short draft run it matches face detectors pretrained on WIDER FACE (YuNet, RetinaFace). SCRFD scores higher on ordinary photos, but its pretrained weights are for research only, so it appears above as a reference and would not go into your pipeline. I'd also test smaller detectors, which are faster and cheaper per video-hour, to see whether they reach the same accuracy after the same fine-tuning.</p>
+  <p><strong>Data: synthetic hard cases.</strong> Public face datasets contain almost no faces in shower glass or fridge doors, which is the gap your footage exposes. I'd generate images of exactly those scenes with an image-generation model, as in the 22 test scenes above. I'd also generate negatives: toys, cartoon prints and packaging that look like faces but must stay unblurred. The training mix keeps real face photos alongside the generated images, and success is measured only on your real clips. I haven't trained on synthetic data here yet. Training on synthetic views to work on real images is the topic of my 3DV 2022 paper, and the draft model already handles these scenes reasonably without having seen any, so I think the direction is worth testing.</p>
+  <p><strong>Labels: automatic on synthetic images, by hand on yours.</strong> Your footage is under NDA, so none of it goes to an outside AI service. The work splits like this:</p>
+  <ul>
+    <li><em>Generated images:</em> they contain no real people, so multimodal models can draft their face boxes. That makes a large training set cheap, even though some labels are noisy.</li>
+    <li><em>Your clips:</em> I hand-annotate a golden set of face boxes on frames inside your CSV's face spans, working on my own machine with my detector's boxes as a starting point. This set is the evaluation reference and also measures how noisy the synthetic labels are. Part of it can go into fine-tuning, with whole clips held out for testing.</li>
+  </ul>
+  <p><strong>Metric: face coverage, not IoU.</strong> Standard detection scoring (IoU ≥ 0.5) counts a box that covers only half a face as a hit, and that half face stays visible. For redaction I would score:</p>
+  <ul>
+    <li>Coverage of each labelled face: the share of the face area inside the blur. The target is ≥ 99% coverage, not a box overlap score. Of the 14 faces above, only 7 reach it with the current padding.</li>
+    <li>Blur spill: blurred area outside any face, and seconds of blur in face-free stretches. This reflects your “only the face” requirement.</li>
+    <li>Recall per face span, matching your scoring. A face counts as protected only if every frame in its span is covered.</li>
+  </ul>
+  <p><strong>4K video.</strong> A reflected face can be 40 px wide in a 4K frame. If the whole frame is shrunk to the detector's input size, that face disappears, so I'd add tiles at native resolution to the full-frame pass. Tracking forward and backward then bridges single missed frames. Cost is measured per video-hour on a stated GPU, with decoding and encoding included.</p>
+
+  <h2>How I would use the trial week</h2>
+  <p>One week is short, so the plan does the reliable work first and gives the synthetic-data experiment a fixed time slot alongside it.</p>
+  <ol>
+    <li><strong>Day 1.</strong> Run your current YuNet setup and my detector on the 15 clips and score both per face span against <code>face_timestamps.csv</code>, which is used only for scoring. Group the misses: mirror, glass, small face, motion blur.</li>
+    <li><strong>Days 2–4.</strong> Raise recall with methods that don't need new training: tiles at native resolution for small reflections, tracking to bridge missed frames, and padding tuned so the whole face is covered. In parallel, run one synthetic fine-tune aimed at the day-1 misses. It goes into the PR only if it beats the version without it on your clips.</li>
+    <li><strong>Days 5–6.</strong> Choose the cutoff, render all 15 clips, and measure throughput and $ per video-hour on a named GPU.</li>
+    <li><strong>Day 7.</strong> Deliver the videos, the metrics report, a PR with run instructions, and a weights/licence list. Only commercially licensed weights go into the PR.</li>
+  </ol>
+  <p>Smaller models, a large synthetic set and a bigger hand-labelled set are follow-on work if you keep me on. They need more than a week to test properly.</p>
+  <p><strong>On irreversibility:</strong> the face pixels are replaced before encoding, so the original pixels never reach the output file. A solid fill is fully irreversible. A light Gaussian blur can be partly undone, so if you want blur I would make it strong and check it by running a face matcher on the output. Outside the box the frame is untouched apart from the re-encode.</p>
+
+  <hr>
+  <footer>
+    <p><strong>Background:</strong> PhD in computer vision, Imperial College London, on domain adaptation (making models trained on one kind of data work on another).</p>
+    <ul>
+      <li>Object detection: BMVC 2019 detector domain adaptation paper, +6.7 / +4.0 / +9.6 mAP over the prior state of the art (<a href="https://arxiv.org/abs/1911.10033">arXiv</a>). I also fine-tuned and deployed a real-time detection and segmentation model on a Jetson TX2 for drones (sees.ai).</li>
+      <li>Synthetic to real: OoD-Pose, 3DV 2022.</li>
+      <li>Transparent and reflective objects: 3D modelling of transparent objects in the EU IPALM project.</li>
+      <li>Reviewer for CVPR, ICCV and ECCV, and an outstanding reviewer at CVPR 2024 and ECCV 2024.</li>
+    </ul>
+    <p><a href="https://github.com/alopezgit">GitHub</a></p>
+    <p><strong>Data:</strong> training on Open Images V7 (CC BY 2.0 per source metadata). Test scenes generated with an image model and labelled by hand.</p>
+  </footer>
+</main>
+</body>
+</html>
