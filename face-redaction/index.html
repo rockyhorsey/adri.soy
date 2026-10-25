@@ -125,11 +125,13 @@
   <h2>Proposed approach</h2>
   <p><strong>Model.</strong> I'd start from RF-DETR Small. It is a small real-time detector with a DINOv2 backbone, it fine-tunes quickly, and its Apache-2.0 weights allow commercial use. Even after this short draft run it matches face detectors pretrained on WIDER FACE (YuNet, RetinaFace). SCRFD scores higher on ordinary photos, but its pretrained weights are for research only, so it appears above as a reference and would not go into your pipeline. I'd also test smaller detectors, which are faster and cheaper per video-hour, to see whether they reach the same accuracy after the same fine-tuning.</p>
   <p><strong>Data: synthetic hard cases.</strong> Public face datasets contain almost no faces in shower glass or fridge doors, which is the gap your footage exposes. I'd generate images of exactly those scenes with an image-generation model, as in the 22 test scenes above. I'd also generate negatives: toys, cartoon prints and packaging that look like faces but must stay unblurred. The training mix keeps real face photos alongside the generated images, and success is measured only on your real clips. I haven't trained on synthetic data here yet. Training on synthetic views to work on real images is the topic of my 3DV 2022 paper, and the draft model already handles these scenes reasonably without having seen any, so I think the direction is worth testing.</p>
-  <p><strong>Labels: automatic on synthetic images, by hand on yours.</strong> Your footage is under NDA, so none of it goes to an outside AI service. The work splits like this:</p>
-  <ul>
-    <li><em>Generated images:</em> they contain no real people, so multimodal models can draft their face boxes. That makes a large training set cheap, even though some labels are noisy.</li>
-    <li><em>Your clips:</em> I hand-annotate a golden set of face boxes on frames inside your CSV's face spans, working on my own machine with my detector's boxes as a starting point. This set is the evaluation reference and also measures how noisy the synthetic labels are. Part of it can go into fine-tuning, with whole clips held out for testing.</li>
-  </ul>
+  <p><strong>Labels: large teacher models, small fast student.</strong> Large models with more context generalise to hard cases far better than small detectors. That includes DINO-based detectors, SAM 3 and frontier multimodal LLMs. In the hard-scene table above, SAM 3.1 found all 14 reflected faces, but it also fired in 5 of 9 empty scenes and runs at 0.2 images per second. That makes it a good labeller and unusable in production. So I would distil the large models into the small detector through their labels:</p>
+  <ol>
+    <li>Large teacher models label hard cases: your missed spans, generated reflection scenes, and face-like toys and prints.</li>
+    <li>Their false alarms are filtered out with tracking consistency across frames and checked against a hand-annotated golden set from your clips.</li>
+    <li>The small, cheap detector is fine-tuned on the filtered labels and scored only on your real clips.</li>
+  </ol>
+  <p>Distillation is one of my research topics (BMVC 2022), and this filtering is the same idea as the robust pseudo-labelling in my BMVC 2019 detection paper. Your footage is under NDA, so it is labelled only by models running on my machine, plus the hand-annotated golden set. Frontier LLM APIs only ever see generated images.</p>
   <p><strong>Metric: face coverage, not IoU.</strong> Standard detection scoring (IoU ≥ 0.5) counts a box that covers only half a face as a hit, and that half face stays visible. For redaction I would score:</p>
   <ul>
     <li>Coverage of each labelled face: the share of the face area inside the blur. The target is ≥ 99% coverage, not a box overlap score. Of the 14 faces above, only 7 reach it with the current padding.</li>
@@ -142,7 +144,7 @@
   <p>One week is short, so the plan does the reliable work first and gives the synthetic-data experiment a fixed time slot alongside it.</p>
   <ol>
     <li><strong>Day 1.</strong> Run your current YuNet setup and my detector on the 15 clips and score both per face span against <code>face_timestamps.csv</code>, which is used only for scoring. Group the misses: mirror, glass, small face, motion blur.</li>
-    <li><strong>Days 2–4.</strong> Raise recall with methods that don't need new training: tiles at native resolution for small reflections, tracking to bridge missed frames, and padding tuned so the whole face is covered. In parallel, run one synthetic fine-tune aimed at the day-1 misses. It goes into the PR only if it beats the version without it on your clips.</li>
+    <li><strong>Days 2–4.</strong> Raise recall with methods that don't need new training: tiles at native resolution for small reflections, tracking to bridge missed frames, and padding tuned so the whole face is covered. In parallel, run one fine-tune on teacher-labelled hard cases (generated scenes plus the day-1 misses). It goes into the PR only if it beats the version without it on your clips.</li>
     <li><strong>Days 5–6.</strong> Choose the cutoff, render all 15 clips, and measure throughput and $ per video-hour on a named GPU.</li>
     <li><strong>Day 7.</strong> Deliver the videos, the metrics report, a PR with run instructions, and a weights/licence list. Only commercially licensed weights go into the PR.</li>
   </ol>
