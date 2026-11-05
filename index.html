@@ -24,6 +24,7 @@
     li { padding: 14px 0; border-bottom: 1px solid var(--line); }
     li a { font-weight: 600; }
     li span { display: block; color: var(--muted); font-size: 14px; }
+    .note { color: var(--muted); font-size: 14px; margin: -2px 0 4px; }
   </style>
 </head>
 <body>
@@ -32,15 +33,20 @@
   <p class="lead">Computer vision engineer · PhD, Imperial College London · Barcelona</p>
   <p>I train, evaluate and deploy vision models, especially when the data you have differs from the data you need: unusual scenes, synthetic training data, noisy sensors. My work covers object detection, depth and 3D reconstruction, and 3D humans.</p>
 
-  <h2>Work</h2>
+  <h2>Applied projects</h2>
+  <p class="note">Short proofs of concept, each built and measured in a few days.</p>
   <ul>
-    <li><a href="optical-flow/">Optical flow and occlusion ground truth from 3D renders</a><span>Forward and backward flow, the object in front of anything hidden, and exit/reentry events, checked against independent references. 2026.</span></li>
-    <li><a href="face-redaction/">Face redaction in mirrors and shower glass</a><span>A fine-tuned detector that found 14 of 14 reflected faces; YuNet found 10. 2026.</span></li>
-    <li><a href="https://github.com/alopezgit/project-adapt">Synthetic-to-real LiDAR depth completion</a><span>ACCV 2020 Best Student Paper, IJCV 2022, US patent.</span></li>
-    <li><a href="https://arxiv.org/abs/2108.07260">OoD-Pose: camera pose regression trained on synthetic views</a><span>3DV 2022, joint first author. Renders new views where training poses are missing.</span></li>
-    <li><a href="https://github.com/alopezgit/DESC">Monocular depth estimation across domains</a><span>BMVC 2020 oral, IJCV 2022.</span></li>
-    <li><a href="https://arxiv.org/abs/1911.10033">Object detection that transfers to new image styles</a><span>BMVC 2019. Up to +9.6 mAP over the prior state of the art.</span></li>
-    <li><a href="https://arxiv.org/abs/2411.01512">InstantGeoAvatar: 3D avatars from monocular video</a><span>Co-author, 2024. Clothed human geometry in under 10 minutes of training.</span></li>
+    <li><a href="optical-flow/">Optical flow and occlusion ground truth from 3D renders</a><span>2026 · Forward and backward flow, the object in front of anything hidden, and exit/reentry events, checked against independent references.</span></li>
+    <li><a href="face-redaction/">Face redaction in mirrors and shower glass</a><span>2026 · A fine-tuned detector that found 14 of 14 reflected faces; YuNet found 10.</span></li>
+  </ul>
+
+  <h2>Research</h2>
+  <ul>
+    <li><a href="https://github.com/alopezgit/project-adapt">Synthetic-to-real LiDAR depth completion</a><span>ACCV 2020 · Best Student Paper. Extended in IJCV 2022; US patent.</span></li>
+    <li><a href="https://arxiv.org/abs/2108.07260">OoD-Pose: camera pose regression trained on synthetic views</a><span>3DV 2022 · Joint first author. Renders new views where training poses are missing.</span></li>
+    <li><a href="https://github.com/alopezgit/DESC">Monocular depth estimation across domains</a><span>BMVC 2020 · Oral. Extended in IJCV 2022.</span></li>
+    <li><a href="https://arxiv.org/abs/1911.10033">Object detection that transfers to new image styles</a><span>BMVC 2019 · Up to +9.6 mAP over the prior state of the art.</span></li>
+    <li><a href="https://arxiv.org/abs/2411.01512">InstantGeoAvatar: 3D avatars from monocular video</a><span>2024 · Co-author. Clothed human geometry in under 10 minutes of training.</span></li>
   </ul>
 
   <h2>Elsewhere</h2>
