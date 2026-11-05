@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Optical Flow and Occlusion Ground Truth</title>
+  <meta name="description" content="Forward and backward optical flow, occluder attribution and visibility events computed from 3D renders, checked against independent references. Demo on an original procedural orrery.">
+  <meta property="og:title" content="Optical flow and occlusion ground truth from 3D renders">
+  <meta property="og:image" content="https://adri.soy/optical-flow/assets/orrery-077.jpg">
+  <style>
+    :root {
+      --bg: #ffffff; --fg: #1d2124; --muted: #5d666d; --line: #e3e6e8;
+      --soft: #f5f6f7; --accent: #1f6f5c; --good: #1f6f5c; --bad: #a3462b;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #16191b; --fg: #e6e8ea; --muted: #9aa3aa; --line: #2c3236;
+        --soft: #1e2225; --accent: #6cc3a8; --good: #6cc3a8; --bad: #e08a6d;
+      }
+    }
+    :root[data-theme="dark"] {
+      --bg: #16191b; --fg: #e6e8ea; --muted: #9aa3aa; --line: #2c3236;
+      --soft: #1e2225; --accent: #6cc3a8; --good: #6cc3a8; --bad: #e08a6d;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+    main { max-width: 760px; margin: 0 auto; padding: 48px 16px 64px; }
+    .wide { width: min(1200px, calc(100vw - 32px)); margin-left: 50%; transform: translateX(-50%); }
+    h1 { font-size: 28px; line-height: 1.25; margin: 0 0 6px; letter-spacing: -0.01em; }
+    h2 { font-size: 20px; margin: 44px 0 12px; }
+    p { margin: 0 0 14px; }
+    a { color: var(--accent); }
+    .byline { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+    .tldr { background: var(--soft); border: 1px solid var(--line); border-radius: 8px; padding: 18px 22px; }
+    .tldr h2 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+    .tldr ul { margin: 0; padding-left: 20px; }
+    .tldr li { margin: 6px 0; }
+    figure { margin: 28px 0 8px; }
+    video, figure img { width: 100%; height: auto; display: block; border-radius: 6px; border: 1px solid var(--line); background: #0d1424; }
+    figcaption, .caption { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .panels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 18px; font-size: 14px; margin: 14px 0 0; padding: 0; list-style: none; }
+    .panels li { margin: 0; }
+    .panels b { display: block; }
+    .table-wrap { overflow-x: auto; margin: 4px 0 8px; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { font-weight: 600; color: var(--muted); font-size: 13px; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .good { color: var(--good); }
+    .bad { color: var(--bad); }
+    ol, ul { padding-left: 22px; }
+    li { margin: 4px 0; }
+    hr { border: 0; border-top: 1px solid var(--line); margin: 44px 0 20px; }
+    footer { font-size: 13px; color: var(--muted); }
+    @media (max-width: 620px) { h1 { font-size: 24px; } .panels { grid-template-columns: 1fr 1fr; } }
+    @media (prefers-reduced-motion: reduce) { video { animation: none; } }
+  </style>
+</head>
+<body>
+<main>
+  <p class="byline"><a href="../">Adrián López Rodríguez</a></p>
+  <h1>Optical flow and occlusion ground truth from 3D renders</h1>
+  <p class="byline">Proof of concept for a synthetic-data annotation project · November 2026</p>
+
+  <section class="tldr" aria-labelledby="tldr">
+    <h2 id="tldr">TL;DR</h2>
+    <ul>
+      <li>A Python tool that takes a renderer's standard outputs (multipart EXR with depth and Cryptomatte object IDs, amodal masks, camera and object transforms) and produces <strong>forward and backward optical flow</strong> with a per-pixel validity mask, the <strong>object in front</strong> of anything hidden, and each object's <strong>visibility history</strong>: occlusions, exits, reentries and frames since last seen.</li>
+      <li>Flow is computed from geometry, not estimated from pixels. On a sequence with a moving camera and independently moving objects it matches Blender's own motion-vector pass to <strong>0.00085 px</strong> (95th percentile).</li>
+      <li>On the orrery below, every occlusion, exit and reentry for all 14 tracked objects matches an independent geometric check, including a <strong>one-frame occlusion</strong> nobody designed.</li>
+    </ul>
+  </section>
+
+  <figure class="wide">
+    <video src="assets/orrery-panels.mp4" poster="assets/orrery-077.jpg" width="1920" height="720" autoplay muted loop playsinline controls preload="metadata"></video>
+    <figcaption>Original procedural scene, 120 frames. Rendered in Blender Cycles; every annotation comes from the tool, not the renderer.</figcaption>
+  </figure>
+  <ul class="panels">
+    <li><b>Render</b>A brass orrery with planets on thin arms, two moons and a comet, filmed with an orbiting camera.</li>
+    <li><b>Forward flow</b>Where each pixel goes in the next frame. Colour is direction, brightness is speed.</li>
+    <li><b>Backward flow</b>Where each pixel of the next frame came from, computed independently.</li>
+    <li><b>Occluded</b>Pixels that will be hidden in the next frame, with the object hiding them.</li>
+    <li><b>Revealed</b>Background that a moving object has just uncovered (disoccluded).</li>
+    <li><b>Timeline</b>Each object's state: visible, occluded (red), out of frame (blue), with event markers.</li>
+  </ul>
+
+  <h2>Why backward flow is computed separately</h2>
+  <p>It is tempting to get backward flow by flipping the forward flow, or by pushing forward vectors onto the next frame. Both look fine on most of the image and fail exactly where the annotations matter: background that a moving object has just revealed. Those pixels did not exist in the previous frame, so no forward vector describes them.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Method, on revealed pixels</th><th class="num">Result</th></tr></thead>
+      <tbody>
+        <tr><td>Negate the forward flow</td><td class="num bad">90% wrong by more than 1 px</td></tr>
+        <tr><td>Push forward vectors onto the next frame</td><td class="num bad">88% get no value</td></tr>
+        <tr><td>Reproject from the next frame (this tool)</td><td class="num good">Correct, and marked as revealed</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="caption">Measured on 46 frame pairs with moving cameras and objects; 55,106 revealed pixels.</p>
+
+  <h2>Brief occlusions vs real exits</h2>
+  <p>A short occlusion and a short exit look the same to a smoothing filter: the object is absent for a frame. Hysteresis turns the occlusion into a fake exit, and gap-bridging deletes both. This tool records <em>why</em> each object is missing before any event is created: hidden by another object (and which one), out of frame, behind the camera, or an unexplained annotation dropout, which is flagged rather than turned into an event. On six synthetic stress cases this got all six exactly right; hysteresis and gap-bridging got three each.</p>
+  <p>In the orrery, the small moon moves about 40 px per frame and passes completely behind the gold planet on frame 77. The tool reports a one-frame occlusion by Gold_Planet, not an exit. I hadn't designed that event; an independent ray-casting check confirmed it.</p>
+
+  <h2>How it was checked</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Check</th><th class="num">Result</th></tr></thead>
+      <tbody>
+        <tr><td>Flow vs Blender's motion-vector pass, moving camera and objects</td><td class="num">p95 0.00085 px</td></tr>
+        <tr><td>Forward–backward round trip, orrery</td><td class="num">p95 0.006 px</td></tr>
+        <tr><td>Depth back-projection vs Blender's position pass</td><td class="num">p95 2×10⁻⁵ units</td></tr>
+        <tr><td>Edge pixels flagged ambiguous that are genuinely mixed at 2× resolution</td><td class="num">95%</td></tr>
+        <tr><td>Orrery events vs independent geometric check, 14 objects</td><td class="num good">all match</td></tr>
+        <tr><td>Speed at 1080p with 30 objects, one process</td><td class="num">~10 s per frame</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Limits</h2>
+  <ul>
+    <li>Objects are assumed to move rigidly with their transforms. A built-in check flags objects that deform, such as characters or cloth, instead of silently producing wrong flow for them.</li>
+    <li>Edge pixels that mix two surfaces are flagged as ambiguous rather than given an exact vector.</li>
+    <li>Transparent, refractive and motion-blurred surfaces need a renderer-specific approach.</li>
+  </ul>
+
+  <hr>
+  <footer>
+    <p><strong>Background:</strong> PhD in computer vision, Imperial College London, on synthetic-to-real transfer: depth completion (ACCV 2020 Best Student Paper), monocular depth (BMVC 2020) and camera pose from synthetic views (3DV 2022).</p>
+    <p><strong>Scene:</strong> original procedural geometry and materials; no downloaded assets.</p>
+    <p><a href="../">Back to all work</a> · <a href="https://github.com/alopezgit">GitHub</a></p>
+  </footer>
+</main>
+</body>
+</html>
