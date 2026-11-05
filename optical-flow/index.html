@@ -6,7 +6,7 @@
   <title>Optical Flow and Occlusion Ground Truth</title>
   <meta name="description" content="Forward and backward optical flow, occluder attribution and visibility events computed from 3D renders, checked against independent references. Demo on an original procedural orrery.">
   <meta property="og:title" content="Optical flow and occlusion ground truth from 3D renders">
-  <meta property="og:image" content="https://adri.soy/optical-flow/assets/orrery-077.jpg">
+  <meta property="og:image" content="https://adri.soy/optical-flow/assets/orrery-loop-poster.jpg">
   <style>
     :root {
       --bg: #ffffff; --fg: #1d2124; --muted: #5d666d; --line: #e3e6e8;
@@ -68,16 +68,16 @@
     <ul>
       <li>A Python tool that takes a renderer's standard outputs (multipart EXR with depth and Cryptomatte object IDs, amodal masks, camera and object transforms) and produces <strong>forward and backward optical flow</strong> with a per-pixel validity mask, the <strong>object in front</strong> of anything hidden, and each object's <strong>visibility history</strong>: occlusions, exits, reentries and frames since last seen.</li>
       <li>Flow is computed from geometry, not estimated from pixels. On a sequence with a moving camera and independently moving objects it matches Blender's own motion-vector pass to <strong>0.00085 px</strong> (95th percentile).</li>
-      <li>On the orrery below, every occlusion, exit and reentry for all 14 tracked objects matches an independent geometric check, including a <strong>one-frame occlusion</strong> nobody designed.</li>
+      <li>On the looping orrery below, the independent ray-cast oracle agrees with the tool on every full occlusion of the 14 tracked objects, to within a few frames at two boundaries (listed under "How it was checked"). The tool records why each object is missing, not just that it is missing.</li>
     </ul>
   </section>
 
   <figure class="wide">
-    <video src="assets/orrery-panels.mp4" poster="assets/orrery-077.jpg" width="1920" height="720" autoplay muted loop playsinline controls preload="metadata"></video>
-    <figcaption>Original procedural scene, 120 frames. Rendered in Blender Cycles; every annotation comes from the tool, not the renderer.</figcaption>
+    <video src="assets/orrery-loop.mp4" poster="assets/orrery-loop-poster.jpg" width="1920" height="720" autoplay muted loop playsinline controls preload="metadata"></video>
+    <figcaption>Original procedural scene, 240 frames at 24 fps, seamless loop. Rendered in Blender Cycles; every annotation comes from the tool, not the renderer.</figcaption>
   </figure>
   <ul class="panels">
-    <li><b>Render</b>A brass orrery with planets on thin arms, two moons and a comet, filmed with an orbiting camera.</li>
+    <li><b>Render</b>A brass orrery with planets on thin arms, moons that pass behind planets, and a coral body that leaves the frame and returns.</li>
     <li><b>Forward flow</b>Where each pixel goes in the next frame. Colour is direction, brightness is speed.</li>
     <li><b>Backward flow</b>Where each pixel of the next frame came from, computed independently.</li>
     <li><b>Occluded</b>Pixels that will be hidden in the next frame, with the object hiding them.</li>
@@ -101,7 +101,7 @@
 
   <h2>Brief occlusions vs real exits</h2>
   <p>A short occlusion and a short exit look the same to a smoothing filter: the object is absent for a frame. Hysteresis turns the occlusion into a fake exit, and gap-bridging deletes both. This tool records <em>why</em> each object is missing before any event is created: hidden by another object (and which one), out of frame, behind the camera, or an unexplained annotation dropout, which is flagged rather than turned into an event. On six synthetic stress cases this got all six exactly right; hysteresis and gap-bridging got three each.</p>
-  <p>In the orrery, the small moon moves about 40 px per frame and passes completely behind the gold planet on frame 77. The tool reports a one-frame occlusion by Gold_Planet, not an exit. I hadn't designed that event; an independent ray-casting check confirmed it.</p>
+  <p>In the loop, the gold eclipse moon passes behind the gold planet across the loop seam (frames 240, 1 and 2), and it is only fully hidden for those frames. The teal eclipse moon is fully hidden behind the central sun for frames 89–153. Each of these is recorded as an occlusion with its occluder, not as an exit, and the independent ray-cast check agrees on the frame ranges.</p>
 
   <h2>How it was checked</h2>
   <div class="table-wrap">
@@ -112,7 +112,8 @@
         <tr><td>Forward–backward round trip, orrery</td><td class="num">p95 0.006 px</td></tr>
         <tr><td>Depth back-projection vs Blender's position pass</td><td class="num">p95 2×10⁻⁵ units</td></tr>
         <tr><td>Edge pixels flagged ambiguous that are genuinely mixed at 2× resolution</td><td class="num">95%</td></tr>
-        <tr><td>Orrery events vs independent geometric check, 14 objects</td><td class="num good">all match</td></tr>
+        <tr><td>Loop full occlusions vs independent ray-cast oracle, 14 objects</td><td class="num good">all ranges match except two small boundary differences</td></tr>
+        <tr><td>Loop frame 241 vs frame 1 (seamless wrap)</td><td class="num">identical transforms; RGB max diff 8×10⁻⁵</td></tr>
         <tr><td>Speed at 1080p with 30 objects, one process</td><td class="num">~10 s per frame</td></tr>
       </tbody>
     </table>
